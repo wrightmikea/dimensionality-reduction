@@ -164,14 +164,29 @@ const lda = (data, labels, nComponents = 3) => {
     Sw[i][i] += lambda;
   }
 
-  // Power iteration on Sw^-1 * Sb
+  // Power iteration on Sw^-1 * Sb with orthogonalization
   const eigenvectors = [];
   for (let comp = 0; comp < Math.min(nComponents, nClasses - 1); comp++) {
     let v = Array(d).fill(0).map(() => Math.random());
+
+    // Orthogonalize against previous eigenvectors
+    for (let prevComp = 0; prevComp < eigenvectors.length; prevComp++) {
+      const prev = eigenvectors[prevComp];
+      const dot = v.reduce((sum, val, i) => sum + val * prev[i], 0);
+      for (let i = 0; i < d; i++) {
+        v[i] -= dot * prev[i];
+      }
+    }
+
     let norm = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+    if (norm < 1e-10) {
+      // Random restart if orthogonalization resulted in zero vector
+      v = Array(d).fill(0).map(() => Math.random());
+      norm = Math.sqrt(v.reduce((sum, val) => sum + val * val, 0));
+    }
     v = v.map(val => val / norm);
 
-    for (let iter = 0; iter < 50; iter++) {
+    for (let iter = 0; iter < 100; iter++) {
       // Multiply by Sb
       const Sbv = Array(d).fill(0);
       for (let i = 0; i < d; i++) {
@@ -180,9 +195,9 @@ const lda = (data, labels, nComponents = 3) => {
         }
       }
 
-      // Solve Sw * x = Sbv (using simple iteration)
+      // Solve Sw * x = Sbv (using Gauss-Seidel iteration)
       let x = [...Sbv];
-      for (let it = 0; it < 10; it++) {
+      for (let it = 0; it < 20; it++) {
         const newX = Array(d).fill(0);
         for (let i = 0; i < d; i++) {
           newX[i] = Sbv[i];
@@ -194,7 +209,17 @@ const lda = (data, labels, nComponents = 3) => {
         x = newX;
       }
 
+      // Orthogonalize against previous eigenvectors
+      for (let prevComp = 0; prevComp < eigenvectors.length; prevComp++) {
+        const prev = eigenvectors[prevComp];
+        const dot = x.reduce((sum, val, i) => sum + val * prev[i], 0);
+        for (let i = 0; i < d; i++) {
+          x[i] -= dot * prev[i];
+        }
+      }
+
       norm = Math.sqrt(x.reduce((sum, val) => sum + val * val, 0));
+      if (norm < 1e-10) break;
       v = x.map(val => val / norm);
     }
 
@@ -309,6 +334,13 @@ const isomap = (data, nComponents = 3, nNeighbors = 10) => {
 
     eigenvectors.push(v);
     eigenvalues.push(eigenvalue);
+
+    // Deflate B to find next eigenvector
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        B[i][j] -= v[i] * v[j] * eigenvalue;
+      }
+    }
   }
 
   // Coordinates are eigenvectors scaled by sqrt(eigenvalue)
