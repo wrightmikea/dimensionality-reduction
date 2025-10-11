@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dimensionality Reduction Visualizations</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f9fafb;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin: 0 0 8px 0;
+            color: #1f2937;
+            font-size: 18px;
+        }
+        .card p {
+            margin: 0 0 16px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        a {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        a:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dimensionality Reduction Comparison</h1>
+    <p>Explore three different techniques for reducing 10-dimensional clustered data to 3D visualizations.</p>
+
+    <div class="card">
+        <h2>📊 PCA - Principal Component Analysis</h2>
+        <p>Finds directions of maximum variance. Unsupervised and linear.</p>
+        <a href="index_pca.html">View PCA Visualization</a>
+    </div>
+
+    <div class="card">
+        <h2>🎯 LDA - Linear Discriminant Analysis</h2>
+        <p>Maximizes separation between known classes. Supervised and linear.</p>
+        <a href="index_lda.html">View LDA Visualization</a>
+    </div>
+
+    <div class="card">
+        <h2>🗺️ Isomap - Isometric Mapping</h2>
+        <p>Preserves geodesic distances along the data manifold. Unsupervised and non-linear.</p>
+        <a href="index_isomap.html">View Isomap Visualization</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-md;
+  }
+  .card-header {
+    @apply p-6 pb-4;
+  }
+  .card-title {
+    @apply text-xl font-semibold text-gray-800;
+  }
+  .card-content {
+    @apply px-6 pb-6;
+  }
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isomap - Isometric Mapping</title>
+    <link rel="icon" type="image/x-icon" href="favicon_isomap.ico">
+    <script>
+        // Fix Canvas2D warnings - must run before Plotly loads
+        (function() {
+            // Patch the prototype
+            const originalProtoGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+                if (contextType === '2d' || contextType === '2D') {
+                    contextAttributes = contextAttributes || {};
+                    contextAttributes.willReadFrequently = true;
+                }
+                return originalProtoGetContext.call(this, contextType, contextAttributes);
+            };
+
+            // Also patch createElement
+            const originalCreateElement = document.createElement.bind(document);
+            document.createElement = function(tagName, options) {
+                const element = originalCreateElement(tagName, options);
+                if (tagName && tagName.toLowerCase() === 'canvas') {
+                    const elementGetContext = element.getContext.bind(element);
+                    element.getContext = function(contextType, contextAttributes) {
+                        if (contextType === '2d' || contextType === '2D') {
+                            contextAttributes = contextAttributes || {};
+                            contextAttributes.willReadFrequently = true;
+                        }
+                        return elementGetContext(contextType, contextAttributes);
+                    };
+                }
+                return element;
+            };
+        })();
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f9fafb;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 32px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        .description {
+            margin-top: 20px;
+            padding: 16px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to overview</a>
+    <h1>🗺️ Isomap - Isometric Mapping</h1>
+    <p class="subtitle">10-dimensional clustered data reduced to 3D</p>
+
+    <div class="card">
+        <div id="plot"></div>
+        <div class="description">
+            <strong>What it does:</strong> Isomap preserves distances along the data manifold - think of it as preserving "walking distance" rather than straight-line distance. Points that are neighbors in high-dimensional space stay neighbors in 3D. This is particularly good for curved or non-linear structures where straight-line distances are misleading. This is an unsupervised, non-linear technique.
+        </div>
+    </div>
+
+    <script src="dist/shared.js?v=3"></script>
+    <script>
+        // Generate data
+        const { data, labels } = generateClusteredData(80, 3, 10);
+
+        // Apply Isomap
+        const result = isomap(data, 3, 12);
+
+        // Color palette
+        const colors = ['#EF4444', '#10B981', '#3B82F6'];
+        const colorMap = labels.map(l => colors[l]);
+
+        // Create plot
+        const trace = {
+            x: result.map(p => p[0]),
+            y: result.map(p => p[1]),
+            z: result.map(p => p[2]),
+            mode: 'markers',
+            type: 'scatter3d',
+            marker: {
+                size: 6,
+                color: colorMap,
+                opacity: 0.8,
+                line: {
+                    color: 'white',
+                    width: 0.5
+                }
+            },
+            hovertemplate: 'Dim1: %{x:.2f}<br>Dim2: %{y:.2f}<br>Dim3: %{z:.2f}<extra></extra>'
+        };
+
+        const layout = {
+            title: {
+                text: 'Isomap Projection',
+                font: { size: 20 }
+            },
+            scene: {
+                xaxis: { title: 'Isomap Dimension 1' },
+                yaxis: { title: 'Isomap Dimension 2' },
+                zaxis: { title: 'Isomap Dimension 3' },
+                camera: {
+                    eye: { x: 1.5, y: 1.5, z: 1.5 }
+                }
+            },
+            margin: { l: 0, r: 0, t: 40, b: 0 },
+            height: 600
+        };
+
+        const config = {
+            responsive: true,
+            toImageButtonOptions: {
+                format: 'png',
+                filename: 'isomap_plot'
+            }
+        };
+
+        Plotly.newPlot('plot', [trace], layout, config);
+    </script>
+</body>
+</html>
