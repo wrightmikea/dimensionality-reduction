@@ -1,0 +1,33 @@
+{
+  "chunks": [
+    "Machine learning is a subset of artificial intelligence that focuses on training algorithms to learn patterns from data",
+    "Neural networks are computing systems inspired by biological neural networks that constitute animal brains",
+    "Deep learning uses multiple layers of neural networks to progressively extract higher-level features from raw input",
+    "Natural language processing enables computers to understand, interpret, and generate human language",
+    "Computer vision is a field of AI that trains computers to interpret and understand the visual world",
+    "Reinforcement learning is an area of machine learning where an agent learns to make decisions by taking actions in an environment",
+    "The quick brown fox jumps over the lazy dog in the sunny meadow",
+    "A beautiful sunset painted the sky with shades of orange and purple over the calm ocean",
+    "The old oak tree stood majestically in the center of the peaceful park",
+    "Fresh snow covered the mountain peaks creating a pristine winter wonderland",
+    "The chef prepared a delicious meal with locally sourced organic ingredients",
+    "Colorful butterflies danced among the wildflowers in the spring garden",
+    "Python is a high-level programming language known for its simplicity and readability",
+    "JavaScript is the programming language of the web, enabling interactive websites",
+    "SQL databases are used to store and retrieve structured data efficiently",
+    "Git is a distributed version control system for tracking changes in source code",
+    "Docker containers package applications with their dependencies for consistent deployment",
+    "REST APIs provide a standardized way for different software systems to communicate",
+    "Photosynthesis is the process by which plants convert light energy into chemical energy",
+    "DNA contains the genetic instructions used in the growth and functioning of all living organisms",
+    "Evolution is the change in heritable characteristics of biological populations over successive generations",
+    "The mitochondria is often called the powerhouse of the cell due to its role in energy production",
+    "Neurons transmit information throughout the body using electrical and chemical signals",
+    "Ecosystems consist of all living organisms and their physical environment interacting as a system"
+  ],
+  "metadata": {
+    "source": "example dataset for embedding visualization",
+    "categories": ["ML/AI", "Nature", "Programming", "Biology"],
+    "date": "2025-01-10"
+  }
+}

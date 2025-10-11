@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedding Visualization</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script>
+        // Fix Canvas2D warnings - must run before Plotly loads
+        (function() {
+            const originalProtoGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+                if (contextType === '2d' || contextType === '2D') {
+                    contextAttributes = contextAttributes || {};
+                    contextAttributes.willReadFrequently = true;
+                }
+                return originalProtoGetContext.call(this, contextType, contextAttributes);
+            };
+
+            const originalCreateElement = document.createElement.bind(document);
+            document.createElement = function(tagName, options) {
+                const element = originalCreateElement(tagName, options);
+                if (tagName && tagName.toLowerCase() === 'canvas') {
+                    const elementGetContext = element.getContext.bind(element);
+                    element.getContext = function(contextType, contextAttributes) {
+                        if (contextType === '2d' || contextType === '2D') {
+                            contextAttributes = contextAttributes || {};
+                            contextAttributes.willReadFrequently = true;
+                        }
+                        return elementGetContext(contextType, contextAttributes);
+                    };
+                }
+                return element;
+            };
+        })();
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .controls {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .control-row {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #374151;
+        }
+        select, input, textarea, button {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        textarea {
+            font-family: monospace;
+            resize: vertical;
+            min-height: 100px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        .info {
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #4b5563;
+        }
+        .query-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to overview</a>
+    <h1>🔍 Embedding Visualization</h1>
+    <p style="color: #6b7280; margin-bottom: 20px;">
+        Visualize high-dimensional embeddings from different models, highlight query-relevant chunks, and compare clustering.
+    </p>
+
+    <div class="grid">
+        <div class="card">
+            <h2 style="margin-top: 0;">Data Input</h2>
+
+            <div class="control-row">
+                <label>Text Chunks (one per line or paste JSON array)</label>
+                <textarea id="chunksInput" placeholder="Example chunk 1&#10;Example chunk 2&#10;Example chunk 3&#10;..."></textarea>
+            </div>
+
+            <div class="control-row">
+                <label>Or Upload File (TXT, CSV, JSON)</label>
+                <input type="file" id="fileUpload" accept=".txt,.csv,.json">
+            </div>
+
+            <div class="control-row">
+                <label>Embedding Model</label>
+                <select id="modelSelect">
+                    <option value="demo">Demo Mode (Synthetic Embeddings)</option>
+                    <option value="openai-small">OpenAI text-embedding-3-small (1536d)</option>
+                    <option value="openai-large">OpenAI text-embedding-3-large (3072d)</option>
+                    <option value="voyage-2">Voyage AI voyage-2 (1024d)</option>
+                    <option value="cohere-v3">Cohere embed-english-v3.0 (1024d)</option>
+                </select>
+            </div>
+
+            <div class="control-row">
+                <label>Reduction Technique</label>
+                <select id="techniqueSelect">
+                    <option value="pca">PCA (fastest)</option>
+                    <option value="isomap">Isomap (preserves manifold)</option>
+                    <option value="lda">LDA (requires labels)</option>
+                </select>
+            </div>
+
+            <button id="generateBtn">Generate Embeddings & Visualize</button>
+
+            <div id="status"></div>
+
+            <div class="query-section">
+                <h3 style="margin-top: 0; font-size: 16px;">Query Search</h3>
+                <div class="control-row">
+                    <label>Search Query</label>
+                    <input type="text" id="queryInput" placeholder="Enter query to find similar chunks...">
+                </div>
+                <div class="control-row">
+                    <label>Top K Results: <span id="topKValue">10</span></label>
+                    <input type="range" id="topKSlider" min="1" max="50" value="10" style="width: 100%;">
+                </div>
+                <button id="searchBtn" disabled>Highlight Similar Chunks</button>
+            </div>
+
+            <div class="info">
+                <strong>💡 Demo Mode:</strong> Uses synthetic data to demonstrate the interface.
+                To use real embeddings, you'll need to implement API endpoints at /api/embed/*
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-top: 0;">Visualization</h2>
+            <div id="plot"></div>
+            <div id="plotInfo" class="info" style="display: none;">
+                <strong>Points:</strong> <span id="pointCount">0</span><br>
+                <strong>Dimensions:</strong> <span id="origDims">0</span> → 3<br>
+                <strong>Highlighted:</strong> <span id="highlightCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="dist/shared.js?v=3"></script>
+    <script src="src/embedding-manager.js"></script>
+    <script>
+        const manager = new EmbeddingManager();
+        let currentData = null;
+        let currentReduced = null;
+
+        // UI Elements
+        const chunksInput = document.getElementById('chunksInput');
+        const fileUpload = document.getElementById('fileUpload');
+        const modelSelect = document.getElementById('modelSelect');
+        const techniqueSelect = document.getElementById('techniqueSelect');
+        const generateBtn = document.getElementById('generateBtn');
+        const queryInput = document.getElementById('queryInput');
+        const topKSlider = document.getElementById('topKSlider');
+        const topKValue = document.getElementById('topKValue');
+        const searchBtn = document.getElementById('searchBtn');
+        const status = document.getElementById('status');
+        const plotInfo = document.getElementById('plotInfo');
+
+        // Update top K display
+        topKSlider.addEventListener('input', (e) => {
+            topKValue.textContent = e.target.value;
+        });
+
+        // File upload handler
+        fileUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const text = await file.text();
+
+            if (file.name.endsWith('.json')) {
+                try {
+                    const data = JSON.parse(text);
+                    chunksInput.value = Array.isArray(data) ? data.join('\n') : JSON.stringify(data, null, 2);
+                } catch (err) {
+                    showStatus('Invalid JSON file', 'error');
+                }
+            } else {
+                chunksInput.value = text;
+            }
+        });
+
+        // Generate embeddings and visualize
+        generateBtn.addEventListener('click', async () => {
+            const chunksText = chunksInput.value.trim();
+            if (!chunksText) {
+                showStatus('Please enter some text chunks', 'error');
+                return;
+            }
+
+            // Parse chunks
+            let chunks;
+            try {
+                chunks = JSON.parse(chunksText);
+                if (!Array.isArray(chunks)) chunks = [chunksText];
+            } catch {
+                chunks = chunksText.split('\n').filter(c => c.trim());
+            }
+
+            if (chunks.length < 3) {
+                showStatus('Need at least 3 chunks for visualization', 'error');
+                return;
+            }
+
+            showStatus(`Processing ${chunks.length} chunks...`, 'info');
+            generateBtn.disabled = true;
+
+            try {
+                const modelKey = modelSelect.value;
+                let embeddings, dims;
+
+                if (modelKey === 'demo') {
+                    // Generate synthetic embeddings
+                    dims = 128;
+                    embeddings = chunks.map(() =>
+                        Array(dims).fill(0).map(() => Math.random() * 2 - 1)
+                    );
+                    showStatus(`Generated synthetic ${dims}D embeddings for ${chunks.length} chunks`, 'success');
+                } else {
+                    const result = await manager.generateEmbeddings(chunks, modelKey);
+                    embeddings = result.embeddings;
+                    dims = result.dims;
+                    showStatus(`Generated ${dims}D embeddings using ${modelKey}`, 'success');
+                }
+
+                currentData = {
+                    embeddings,
+                    chunks,
+                    dims,
+                    model: modelKey
+                };
+
+                // Apply dimensionality reduction
+                const technique = techniqueSelect.value;
+                await visualizeEmbeddings(embeddings, chunks, technique);
+
+                searchBtn.disabled = false;
+
+            } catch (err) {
+                showStatus(`Error: ${err.message}`, 'error');
+                console.error(err);
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Search and highlight
+        searchBtn.addEventListener('click', async () => {
+            if (!currentData) return;
+
+            const query = queryInput.value.trim();
+            if (!query) {
+                // Reset highlighting
+                await visualizeEmbeddings(currentData.embeddings, currentData.chunks, techniqueSelect.value);
+                return;
+            }
+
+            showStatus('Computing query embedding...', 'info');
+            searchBtn.disabled = true;
+
+            try {
+                let queryEmb;
+                if (currentData.model === 'demo') {
+                    // Synthetic query embedding
+                    queryEmb = Array(currentData.dims).fill(0).map(() => Math.random() * 2 - 1);
+                } else {
+                    const result = await manager.generateEmbeddings([query], currentData.model);
+                    queryEmb = result.embeddings[0];
+                }
+
+                const topK = parseInt(topKSlider.value);
+                const nearest = manager.findNearest(queryEmb, currentData.embeddings, topK);
+
+                await visualizeEmbeddings(
+                    currentData.embeddings,
+                    currentData.chunks,
+                    techniqueSelect.value,
+                    nearest
+                );
+
+                showStatus(`Highlighted top ${topK} similar chunks`, 'success');
+                document.getElementById('highlightCount').textContent = topK;
+
+            } catch (err) {
+                showStatus(`Search error: ${err.message}`, 'error');
+            } finally {
+                searchBtn.disabled = false;
+            }
+        });
+
+        async function visualizeEmbeddings(embeddings, chunks, technique, highlightIndices = null) {
+            showStatus(`Applying ${technique.toUpperCase()} reduction...`, 'info');
+
+            let reduced;
+            if (technique === 'pca') {
+                reduced = pca(embeddings, 3);
+            } else if (technique === 'isomap') {
+                reduced = isomap(embeddings, 3, Math.min(12, Math.floor(embeddings.length / 3)));
+            } else {
+                showStatus('LDA requires labeled data (not yet implemented)', 'error');
+                return;
+            }
+
+            currentReduced = reduced;
+
+            // Build color and size arrays
+            const colors = new Array(chunks.length);
+            const sizes = new Array(chunks.length);
+            const opacities = new Array(chunks.length);
+
+            if (highlightIndices) {
+                // Highlight mode
+                const highlightSet = new Set(highlightIndices.map(h => h.idx));
+                for (let i = 0; i < chunks.length; i++) {
+                    if (highlightSet.has(i)) {
+                        const hit = highlightIndices.find(h => h.idx === i);
+                        colors[i] = `rgb(239, 68, 68)`; // Red for matches
+                        sizes[i] = 12 + hit.similarity * 8; // Size by similarity
+                        opacities[i] = 0.9;
+                    } else {
+                        colors[i] = `rgb(156, 163, 175)`; // Gray for non-matches
+                        sizes[i] = 4;
+                        opacities[i] = 0.3;
+                    }
+                }
+            } else {
+                // Default mode
+                for (let i = 0; i < chunks.length; i++) {
+                    colors[i] = `rgb(59, 130, 246)`; // Blue
+                    sizes[i] = 6;
+                    opacities[i] = 0.8;
+                }
+            }
+
+            const trace = {
+                x: reduced.map(p => p[0]),
+                y: reduced.map(p => p[1]),
+                z: reduced.map(p => p[2]),
+                mode: 'markers',
+                type: 'scatter3d',
+                text: chunks.map((c, i) =>
+                    `Chunk ${i}: ${c.substring(0, 100)}${c.length > 100 ? '...' : ''}`
+                ),
+                marker: {
+                    size: sizes,
+                    color: colors,
+                    opacity: opacities,
+                    line: {
+                        color: 'white',
+                        width: 0.5
+                    }
+                },
+                hovertemplate: '%{text}<extra></extra>'
+            };
+
+            const layout = {
+                title: {
+                    text: `${technique.toUpperCase()} Projection (${currentData.dims}D → 3D)`,
+                    font: { size: 18 }
+                },
+                scene: {
+                    xaxis: { title: 'Component 1' },
+                    yaxis: { title: 'Component 2' },
+                    zaxis: { title: 'Component 3' },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    }
+                },
+                margin: { l: 0, r: 0, t: 40, b: 0 },
+                height: 600
+            };
+
+            const config = {
+                responsive: true,
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'embeddings_plot'
+                }
+            };
+
+            Plotly.newPlot('plot', [trace], layout, config);
+
+            plotInfo.style.display = 'block';
+            document.getElementById('pointCount').textContent = chunks.length;
+            document.getElementById('origDims').textContent = currentData.dims;
+        }
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

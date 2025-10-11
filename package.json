@@ -1,18 +1,29 @@
 {
-  "name": "pca-lda-isomap",
-  "version": "1.0.0",
-  "description": "",
+  "name": "dimensionality-reduction-viz",
+  "version": "2.0.0",
+  "description": "Interactive 3D visualizations for dimensionality reduction techniques (PCA, LDA, Isomap) with support for real embedding analysis",
   "main": "index.js",
   "directories": {
-    "doc": "docs"
+    "doc": "docs",
+    "api": "api"
   },
   "scripts": {
     "build": "babel src --out-dir dist",
+    "dev": "basic-http-server -a 0.0.0.0:4444",
+    "start": "npm run build && npm run dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "dimensionality-reduction",
+    "pca",
+    "lda",
+    "isomap",
+    "embeddings",
+    "visualization",
+    "machine-learning"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "@babel/cli": "^7.28.3",

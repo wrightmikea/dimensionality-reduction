@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Embeddings - Local Models</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <script>
+        // Fix Canvas2D warnings
+        (function() {
+            const originalProtoGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function(contextType, contextAttributes) {
+                if (contextType === '2d' || contextType === '2D') {
+                    contextAttributes = contextAttributes || {};
+                    contextAttributes.willReadFrequently = true;
+                }
+                return originalProtoGetContext.call(this, contextType, contextAttributes);
+            };
+        })();
+    </script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        h1 {
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+        .status-badge.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status-badge.disconnected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .control-row {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #374151;
+        }
+        select, input, textarea, button {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        textarea {
+            font-family: monospace;
+            resize: vertical;
+            min-height: 80px;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        button:hover:not(:disabled) {
+            background: #2563eb;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: #6b7280;
+        }
+        button.secondary:hover:not(:disabled) {
+            background: #4b5563;
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .progress {
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+            height: 24px;
+        }
+        .progress-bar {
+            background: #3b82f6;
+            height: 100%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .book-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .book-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .book-item:hover {
+            background: #f3f4f6;
+        }
+        .book-item.selected {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .book-item .title {
+            font-weight: 500;
+            color: #1f2937;
+        }
+        .book-item .meta {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 12px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #1e40af;
+        }
+        .view-tab {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 10px 20px;
+            margin: 0 5px 0 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            transition: all 0.2s;
+            width: auto;
+        }
+        .view-tab:hover {
+            color: #3b82f6;
+            background: #f3f4f6;
+        }
+        .view-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: none;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-link">← Back to overview</a>
+    <h1>
+        🦙 Ollama Embeddings - Local Models
+        <span id="ollamaStatus" class="status-badge disconnected">Checking...</span>
+    </h1>
+    <p style="color: #6b7280; margin-bottom: 20px;">
+        Visualize embeddings using local Ollama models with Project Gutenberg texts
+        <span style="float: right; font-size: 11px; color: #9ca3af;">
+            Build: <span id="buildTimestamp"></span>
+        </span>
+    </p>
+
+    <div class="grid">
+        <div class="card">
+            <h2>1. Select Text Source</h2>
+
+            <div class="control-row">
+                <label>
+                    <input type="radio" name="source" value="gutenberg" checked>
+                    Project Gutenberg Book
+                </label>
+                <label>
+                    <input type="radio" name="source" value="custom">
+                    Custom Text
+                </label>
+            </div>
+
+            <div id="gutenbergSection">
+                <label>
+                    <input type="checkbox" id="multiBookMode" style="width: auto; display: inline-block; margin-right: 8px;">
+                    Multi-book mode (compare multiple books)
+                </label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <label style="margin: 0;">Recommended Books</label>
+                    <label id="selectAllLabel" style="display: none; font-size: 13px; margin: 0;">
+                        <input type="checkbox" id="selectAllBooks" onchange="toggleSelectAll()" style="width: auto; display: inline-block; margin-right: 4px;">
+                        Select All
+                    </label>
+                </div>
+                <div class="book-list" id="bookList"></div>
+
+                <div class="control-row" style="margin-top: 15px;">
+                    <label>Or enter Gutenberg Book ID</label>
+                    <input type="number" id="customBookId" placeholder="e.g., 863">
+                    <button onclick="loadCustomBook()" class="secondary">Load Custom Book</button>
+                </div>
+            </div>
+
+            <div id="customSection" style="display: none;">
+                <label>Paste Your Text</label>
+                <textarea id="customText" placeholder="Paste text here..."></textarea>
+            </div>
+
+            <div class="control-row" style="margin-top: 15px;">
+                <label>Chunking Strategy</label>
+                <select id="chunkingStrategy">
+                    <option value="smart" selected>Smart (Auto-detect chapters)</option>
+                    <option value="sentences">By Sentences (5 per chunk)</option>
+                    <option value="paragraphs">By Paragraphs</option>
+                    <option value="chars">By Characters (500 chars)</option>
+                </select>
+            </div>
+
+            <div class="control-row">
+                <label>Max Chunks: <span id="maxChunksValue">50</span></label>
+                <input type="range" id="maxChunks" min="20" max="200" value="50" style="width: 100%;">
+            </div>
+
+            <button id="loadTextBtn" onclick="loadText()">Load & Chunk Text</button>
+
+            <div id="textStatus"></div>
+        </div>
+
+        <div class="card">
+            <h2>2. Generate Embeddings</h2>
+
+            <div class="control-row">
+                <label>Ollama Model</label>
+                <select id="ollamaModel">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="control-row">
+                <label>
+                    <input type="checkbox" id="comparisonMode" style="width: auto; display: inline-block; margin-right: 8px;">
+                    Comparison mode (generate all 3 techniques at once)
+                </label>
+            </div>
+
+            <div id="singleTechniqueSection">
+                <div class="control-row">
+                    <label>Reduction Technique</label>
+                    <select id="technique">
+                        <option value="pca">PCA (fastest, unsupervised)</option>
+                        <option value="lda">LDA (supervised, needs labels)</option>
+                        <option value="isomap">Isomap (preserves manifold)</option>
+                    </select>
+                </div>
+
+                <div id="ldaInfo" class="info-box" style="display: none; background: #fef3c7; border-color: #f59e0b; color: #92400e;">
+                    <strong>⚠️ LDA Note:</strong>
+                    LDA requires labeled classes. Using: <span id="ldaLabelType">book source</span>
+                </div>
+            </div>
+
+            <button id="generateBtn" onclick="generateEmbeddings()" disabled>
+                Generate Embeddings & Visualize
+            </button>
+
+            <div id="progress" class="progress" style="display: none;">
+                <div id="progressBar" class="progress-bar">0%</div>
+            </div>
+
+            <div id="embedStatus"></div>
+
+            <div class="info-box">
+                <strong>💡 Local Processing:</strong>
+                Embeddings are generated locally using Ollama. No data sent to external APIs.
+                Granite (62MB), Nomic (274MB), or GemmaEmbed (621MB) models available.
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h2>3. Visualization</h2>
+
+        <div id="viewTabs" style="display: none; margin-bottom: 15px; border-bottom: 2px solid #e5e7eb;">
+            <button class="view-tab active" onclick="switchView('pca')" data-view="pca">PCA</button>
+            <button class="view-tab" onclick="switchView('lda')" data-view="lda">LDA</button>
+            <button class="view-tab" onclick="switchView('isomap')" data-view="isomap">Isomap</button>
+        </div>
+
+        <div id="plot"></div>
+        <div id="plotInfo" style="margin-top: 15px; font-size: 14px; color: #6b7280;"></div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+        <h2>4. Query Search (Optional)</h2>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 0;">
+            Find chunks similar to your search query and highlight them in the visualization.
+        </p>
+
+        <div class="control-row">
+            <label>Search Query</label>
+            <input type="text" id="queryText" placeholder="e.g., 'murder investigation', 'character dialogue', 'mystery clues'">
+        </div>
+
+        <div class="control-row">
+            <label>Top K Results: <span id="topKValue">10</span></label>
+            <input type="range" id="topK" min="5" max="30" value="10" style="width: 100%;">
+        </div>
+
+        <button id="searchBtn" onclick="searchQuery()" disabled>
+            🔍 Highlight Similar Chunks
+        </button>
+
+        <button id="clearQueryBtn" onclick="clearQuery()" disabled style="background: #6b7280; margin-top: 5px;">
+            Clear Query
+        </button>
+
+        <div id="searchStatus"></div>
+    </div>
+
+    <script src="dist/shared.js?v=17"></script>
+    <script src="src/ollama-embeddings.js?v=17"></script>
+    <script src="src/text-processor.js?v=17"></script>
+    <script>
+        const ollama = new OllamaEmbeddings();
+        let currentChunks = [];
+        let currentLabels = [];
+        let currentBook = null;
+        let selectedBooks = [];
+        let currentEmbeddings = [];
+        let currentReduced = [];
+        let currentModel = '';
+        let currentTechnique = '';
+        let allReductions = {}; // Store all three: {pca: [...], lda: [...], isomap: [...]}
+        let activeView = 'pca';
+        let queryState = null; // Store query: {embedding, text, topIndices, projections: {pca, lda, isomap}}
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Display build timestamp
+            const now = new Date();
+            document.getElementById('buildTimestamp').textContent =
+                now.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+            await checkOllamaConnection();
+            await loadOllamaModels();
+            populateBookList();
+
+            // Update max chunks display
+            document.getElementById('maxChunks').addEventListener('input', (e) => {
+                document.getElementById('maxChunksValue').textContent = e.target.value;
+            });
+
+            // Update top K display
+            document.getElementById('topK').addEventListener('input', (e) => {
+                document.getElementById('topKValue').textContent = e.target.value;
+            });
+
+            // Toggle source sections
+            document.querySelectorAll('input[name="source"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    document.getElementById('gutenbergSection').style.display =
+                        e.target.value === 'gutenberg' ? 'block' : 'none';
+                    document.getElementById('customSection').style.display =
+                        e.target.value === 'custom' ? 'block' : 'none';
+                });
+            });
+
+            // Multi-book mode toggle
+            document.getElementById('multiBookMode').addEventListener('change', () => {
+                populateBookList();
+                selectedBooks = [];
+                currentBook = null;
+            });
+
+            // Comparison mode toggle
+            document.getElementById('comparisonMode').addEventListener('change', (e) => {
+                const singleSection = document.getElementById('singleTechniqueSection');
+                singleSection.style.display = e.target.checked ? 'none' : 'block';
+            });
+
+            // Technique change - show LDA info
+            document.getElementById('technique').addEventListener('change', (e) => {
+                const ldaInfo = document.getElementById('ldaInfo');
+                if (e.target.value === 'lda') {
+                    ldaInfo.style.display = 'block';
+                    const labelType = selectedBooks.length > 1 ? 'book source' :
+                                     currentLabels.length > 1 ? 'auto-detected chapters' : 'chunk order';
+                    document.getElementById('ldaLabelType').textContent = labelType;
+                } else {
+                    ldaInfo.style.display = 'none';
+                }
+            });
+        });
+
+        function switchView(technique) {
+            if (!allReductions[technique]) {
+                showStatus('embedStatus', `${technique.toUpperCase()} not available`, 'error');
+                return;
+            }
+
+            activeView = technique;
+            currentTechnique = technique;
+            currentReduced = allReductions[technique];
+
+            // Update tab active state
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                if (tab.dataset.view === technique) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+
+            // Re-visualize with selected technique
+            // If there's an active query, show it
+            if (queryState && queryState.projections[technique]) {
+                visualizeWithQuery(
+                    currentReduced,
+                    currentChunks,
+                    currentModel,
+                    technique,
+                    queryState.topIndices,
+                    queryState.projections[technique],
+                    queryState.text
+                );
+            } else {
+                visualize(currentReduced, currentChunks, currentModel, technique);
+            }
+        }
+
+        async function checkOllamaConnection() {
+            const connected = await ollama.testConnection();
+            const badge = document.getElementById('ollamaStatus');
+
+            if (connected) {
+                badge.textContent = 'Connected';
+                badge.className = 'status-badge connected';
+            } else {
+                badge.textContent = 'Disconnected';
+                badge.className = 'status-badge disconnected';
+                showStatus('embedStatus', 'Ollama not running. Start with: ollama serve', 'error');
+            }
+        }
+
+        async function loadOllamaModels() {
+            const select = document.getElementById('ollamaModel');
+
+            try {
+                const models = await ollama.getAvailableModels();
+
+                if (models.length === 0) {
+                    select.innerHTML = '<option value="">No embedding models found</option>';
+                    return;
+                }
+
+                select.innerHTML = models.map(model =>
+                    `<option value="${model.name}">${model.name} (${formatSize(model.size)})</option>`
+                ).join('');
+
+            } catch (error) {
+                select.innerHTML = '<option value="">Error loading models</option>';
+            }
+        }
+
+        function populateBookList() {
+            const list = document.getElementById('bookList');
+            const isMultiMode = document.getElementById('multiBookMode').checked;
+            const selectAllLabel = document.getElementById('selectAllLabel');
+            const selectAllCheckbox = document.getElementById('selectAllBooks');
+
+            if (isMultiMode) {
+                // Show select all checkbox
+                selectAllLabel.style.display = 'block';
+                selectAllCheckbox.checked = false;
+
+                list.innerHTML = Object.entries(RECOMMENDED_BOOKS).map(([key, book]) => `
+                    <div class="book-item">
+                        <label style="display: flex; align-items: start; margin: 0; cursor: pointer;">
+                            <input type="checkbox" class="book-checkbox" data-book-key="${key}" onchange="toggleBook('${key}')" style="width: auto; margin-right: 10px; margin-top: 2px; flex-shrink: 0;">
+                            <div style="flex: 1;">
+                                <div class="title">${book.title}</div>
+                                <div class="meta">${book.author} (${book.year}) ${book.recommended ? '⭐ Recommended' : ''}</div>
+                                <div class="meta" style="margin-top: 4px; font-style: italic;">${book.description}</div>
+                            </div>
+                        </label>
+                    </div>
+                `).join('');
+            } else {
+                // Hide select all checkbox
+                selectAllLabel.style.display = 'none';
+
+                list.innerHTML = Object.entries(RECOMMENDED_BOOKS).map(([key, book]) => `
+                    <div class="book-item" onclick="selectBook('${key}')">
+                        <div class="title">${book.title}</div>
+                        <div class="meta">${book.author} (${book.year}) ${book.recommended ? '⭐ Recommended' : ''}</div>
+                        <div class="meta" style="margin-top: 4px; font-style: italic;">${book.description}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function selectBook(bookKey) {
+            document.querySelectorAll('.book-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.closest('.book-item').classList.add('selected');
+            currentBook = RECOMMENDED_BOOKS[bookKey];
+        }
+
+        function toggleBook(bookKey) {
+            const checkbox = document.querySelector(`input[data-book-key="${bookKey}"]`);
+            const book = RECOMMENDED_BOOKS[bookKey];
+
+            if (checkbox.checked) {
+                selectedBooks.push({ ...book, key: bookKey });
+            } else {
+                selectedBooks = selectedBooks.filter(b => b.key !== bookKey);
+            }
+        }
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllBooks');
+            const bookCheckboxes = document.querySelectorAll('.book-checkbox');
+            const isChecked = selectAllCheckbox.checked;
+
+            selectedBooks = [];
+
+            bookCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const bookKey = checkbox.getAttribute('data-book-key');
+                if (isChecked) {
+                    const book = RECOMMENDED_BOOKS[bookKey];
+                    selectedBooks.push({ ...book, key: bookKey });
+                }
+            });
+        }
+
+        async function loadCustomBook() {
+            const bookId = document.getElementById('customBookId').value;
+            if (!bookId) {
+                showStatus('textStatus', 'Please enter a book ID', 'error');
+                return;
+            }
+
+            showStatus('textStatus', `Loading book ${bookId} from Project Gutenberg...`, 'info');
+
+            try {
+                const book = await TextProcessor.fetchGutenbergBook(bookId);
+                currentBook = {
+                    id: bookId,
+                    title: book.title,
+                    author: book.author,
+                    content: book.content
+                };
+
+                showStatus('textStatus', `Loaded: ${book.title} by ${book.author}`, 'success');
+                processText(book.content);
+
+            } catch (error) {
+                showStatus('textStatus', `Failed to load book: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadText() {
+            const source = document.querySelector('input[name="source"]:checked').value;
+            const isMultiMode = document.getElementById('multiBookMode').checked;
+
+            if (source === 'gutenberg') {
+                if (isMultiMode) {
+                    if (selectedBooks.length === 0) {
+                        showStatus('textStatus', 'Please select at least one book', 'error');
+                        return;
+                    }
+
+                    showStatus('textStatus', `Loading ${selectedBooks.length} books...`, 'info');
+
+                    try {
+                        const allChunks = [];
+                        const allLabels = [];
+
+                        for (let i = 0; i < selectedBooks.length; i++) {
+                            const book = selectedBooks[i];
+                            const bookData = await TextProcessor.fetchGutenbergBook(book.id);
+                            const chunks = processTextChunks(bookData.content);
+
+                            // Label each chunk with book index
+                            allChunks.push(...chunks);
+                            allLabels.push(...chunks.map(() => i));
+                        }
+
+                        currentChunks = allChunks;
+                        currentLabels = allLabels;
+
+                        showStatus('textStatus',
+                            `Loaded ${selectedBooks.length} books with ${allChunks.length} total chunks`,
+                            'success'
+                        );
+
+                        document.getElementById('generateBtn').disabled = false;
+
+                    } catch (error) {
+                        showStatus('textStatus', `Failed to load: ${error.message}`, 'error');
+                    }
+
+                } else {
+                    if (!currentBook) {
+                        showStatus('textStatus', 'Please select a book first', 'error');
+                        return;
+                    }
+
+                    showStatus('textStatus', `Loading ${currentBook.title}...`, 'info');
+
+                    try {
+                        let content = currentBook.content;
+
+                        if (!content) {
+                            const book = await TextProcessor.fetchGutenbergBook(currentBook.id);
+                            content = book.content;
+                        }
+
+                        processText(content);
+
+                    } catch (error) {
+                        showStatus('textStatus', `Failed to load: ${error.message}`, 'error');
+                    }
+                }
+
+            } else {
+                const text = document.getElementById('customText').value.trim();
+                if (!text) {
+                    showStatus('textStatus', 'Please enter some text', 'error');
+                    return;
+                }
+                processText(text);
+            }
+        }
+
+        function processTextChunks(text) {
+            const strategy = document.getElementById('chunkingStrategy').value;
+            const maxChunks = parseInt(document.getElementById('maxChunks').value);
+
+            let chunks;
+            if (strategy === 'smart') {
+                chunks = TextProcessor.smartChunk(text, maxChunks);
+            } else if (strategy === 'sentences') {
+                chunks = TextProcessor.chunkBySentences(text, 5, 1);
+            } else if (strategy === 'paragraphs') {
+                chunks = TextProcessor.chunkByParagraphs(text, maxChunks);
+            } else {
+                chunks = TextProcessor.chunkByChars(text, 500, 50);
+            }
+
+            // Limit to max chunks
+            return chunks.slice(0, maxChunks);
+        }
+
+        function processText(text) {
+            const chunks = processTextChunks(text);
+
+            currentChunks = chunks;
+            // Create sequential labels for LDA (can represent chapters/sections)
+            currentLabels = chunks.map((_, i) => Math.floor(i / Math.max(1, chunks.length / 5)));
+
+            const stats = TextProcessor.getStats(text);
+            showStatus('textStatus',
+                `Chunked into ${chunks.length} pieces. Original: ${stats.words} words, ${stats.sentences} sentences`,
+                'success'
+            );
+
+            document.getElementById('generateBtn').disabled = false;
+        }
+
+        async function generateEmbeddings() {
+            if (currentChunks.length === 0) {
+                showStatus('embedStatus', 'Please load text first', 'error');
+                return;
+            }
+
+            const model = document.getElementById('ollamaModel').value;
+            if (!model) {
+                showStatus('embedStatus', 'Please select a model', 'error');
+                return;
+            }
+
+            const isComparisonMode = document.getElementById('comparisonMode').checked;
+            const technique = isComparisonMode ? 'all' : document.getElementById('technique').value;
+
+            // Check LDA requirements for single mode
+            if (!isComparisonMode && technique === 'lda') {
+                const uniqueLabels = new Set(currentLabels).size;
+                if (uniqueLabels < 2) {
+                    showStatus('embedStatus', 'LDA requires at least 2 classes. Use multi-book mode or ensure your text has multiple chapters.', 'error');
+                    return;
+                }
+                if (uniqueLabels > currentChunks.length / 2) {
+                    showStatus('embedStatus', 'Too many classes for LDA. Reduce chunk count or use PCA/Isomap.', 'error');
+                    return;
+                }
+            }
+
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('progress').style.display = 'block';
+            showStatus('embedStatus', `Generating embeddings with ${model}...`, 'info');
+
+            try {
+                const embeddings = await ollama.embedBatch(
+                    currentChunks,
+                    model,
+                    (current, total) => {
+                        const percent = Math.round((current / total) * 100);
+                        document.getElementById('progressBar').style.width = percent + '%';
+                        document.getElementById('progressBar').textContent = `${current}/${total} (${percent}%)`;
+                    }
+                );
+
+                // Store embeddings for query search
+                currentEmbeddings = embeddings;
+                currentModel = model;
+
+                if (isComparisonMode) {
+                    // Generate all three reductions
+                    showStatus('embedStatus', 'Applying PCA...', 'info');
+                    allReductions.pca = pca(embeddings, 3);
+
+                    // Check if LDA is possible
+                    const uniqueLabels = new Set(currentLabels).size;
+                    if (uniqueLabels >= 2 && uniqueLabels <= currentChunks.length / 2) {
+                        showStatus('embedStatus', 'Applying LDA...', 'info');
+                        allReductions.lda = lda(embeddings, currentLabels, 3);
+                    } else {
+                        allReductions.lda = null;
+                        console.warn('LDA skipped: insufficient labels');
+                    }
+
+                    showStatus('embedStatus', 'Applying Isomap...', 'info');
+                    const neighbors = Math.min(15, Math.floor(embeddings.length / 3));
+                    allReductions.isomap = isomap(embeddings, 3, neighbors);
+
+                    // Show tabs and visualize first view
+                    document.getElementById('viewTabs').style.display = 'block';
+                    activeView = 'pca';
+                    currentTechnique = 'pca';
+                    currentReduced = allReductions.pca;
+                    visualize(allReductions.pca, currentChunks, model, 'pca');
+
+                    // Disable LDA tab if not available
+                    if (!allReductions.lda) {
+                        const ldaTab = document.querySelector('.view-tab[data-view="lda"]');
+                        ldaTab.disabled = true;
+                        ldaTab.style.opacity = '0.5';
+                        ldaTab.style.cursor = 'not-allowed';
+                        ldaTab.title = 'LDA requires at least 2 classes';
+                    }
+
+                    showStatus('embedStatus', 'All visualizations ready! Use tabs to compare.', 'success');
+
+                } else {
+                    // Single technique mode
+                    showStatus('embedStatus', `Applying ${technique.toUpperCase()}...`, 'info');
+
+                    let reduced;
+                    if (technique === 'pca') {
+                        reduced = pca(embeddings, 3);
+                    } else if (technique === 'lda') {
+                        reduced = lda(embeddings, currentLabels, 3);
+                    } else {
+                        const neighbors = Math.min(15, Math.floor(embeddings.length / 3));
+                        reduced = isomap(embeddings, 3, neighbors);
+                    }
+
+                    currentTechnique = technique;
+                    currentReduced = reduced;
+                    allReductions[technique] = reduced;
+                    document.getElementById('viewTabs').style.display = 'none';
+                    visualize(reduced, currentChunks, model, technique);
+
+                    showStatus('embedStatus', 'Visualization complete!', 'success');
+                }
+
+                document.getElementById('searchBtn').disabled = false;
+
+            } catch (error) {
+                showStatus('embedStatus', `Error: ${error.message}`, 'error');
+                console.error(error);
+            } finally {
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('progress').style.display = 'none';
+            }
+        }
+
+        function visualize(reduced, chunks, model, technique, highlightIndices = null) {
+            // Validate coordinates and filter out invalid points
+            const validIndices = [];
+            const validReduced = [];
+            for (let i = 0; i < reduced.length; i++) {
+                const point = reduced[i];
+                if (point && point.length >= 3 &&
+                    isFinite(point[0]) && isFinite(point[1]) && isFinite(point[2]) &&
+                    (point[0] !== 0 || point[1] !== 0 || point[2] !== 0)) { // Not all zeros
+                    validIndices.push(i);
+                    validReduced.push(point);
+                }
+            }
+
+            if (validReduced.length === 0) {
+                showStatus('embedStatus', `${technique.toUpperCase()} produced no valid coordinates`, 'error');
+                return;
+            }
+
+            if (validReduced.length < reduced.length) {
+                console.warn(`${technique}: ${reduced.length - validReduced.length} points filtered due to invalid coordinates`);
+                showStatus('embedStatus',
+                    `⚠️ ${technique.toUpperCase()}: Showing ${validReduced.length}/${reduced.length} valid points`,
+                    'info');
+            }
+
+            // Map to valid chunks and labels
+            const validChunks = validIndices.map(i => chunks[i]);
+            const validLabels = validIndices.map(i => currentLabels[i]);
+
+            // Determine coloring strategy
+            let colors, colorscale, colorbar;
+            const isMultiBook = selectedBooks.length > 1;
+
+            if (highlightIndices !== null) {
+                // Query search mode: red for matches, gray for others
+                colors = validIndices.map(originalIdx => highlightIndices.includes(originalIdx) ? 1 : 0);
+                colorscale = [[0, 'lightgray'], [1, 'red']];
+                colorbar = { title: 'Match' };
+            } else if (isMultiBook || technique === 'lda') {
+                // Multi-book or LDA: color by label
+                colors = validLabels;
+                colorscale = 'Portland';
+                colorbar = { title: isMultiBook ? 'Book' : 'Class' };
+            } else {
+                // Single book: color by sequence using original indices
+                colors = validIndices;
+                colorscale = 'Viridis';
+                colorbar = { title: 'Sequence' };
+            }
+
+            // Build hover text using original indices for proper chunk numbering
+            const hoverText = validIndices.map((originalIdx, i) => {
+                const c = validChunks[i];
+                let text = `Chunk ${originalIdx + 1}`;
+                if (isMultiBook && validLabels[i] !== undefined && selectedBooks[validLabels[i]]) {
+                    text += ` (${selectedBooks[validLabels[i]].title})`;
+                }
+                text += `:\n${c.substring(0, 100)}...`;
+                return text;
+            });
+
+            const trace = {
+                x: validReduced.map(p => p[0]),
+                y: validReduced.map(p => p[1]),
+                z: validReduced.map(p => p[2]),
+                mode: 'markers',
+                type: 'scatter3d',
+                text: hoverText,
+                marker: {
+                    size: highlightIndices ? validIndices.map(originalIdx => highlightIndices.includes(originalIdx) ? 8 : 4) : 5,
+                    color: colors,
+                    colorscale: colorscale,
+                    opacity: 0.8,
+                    showscale: true,
+                    colorbar: colorbar,
+                    line: {
+                        color: 'white',
+                        width: 0.5
+                    }
+                },
+                hovertemplate: '%{text}<extra></extra>'
+            };
+
+            const titleText = isMultiBook ?
+                `${selectedBooks.length} Books - ${model} - ${technique.toUpperCase()}` :
+                `${currentBook?.title || 'Text'} - ${model} - ${technique.toUpperCase()}`;
+
+            const layout = {
+                title: {
+                    text: titleText,
+                    font: { size: 16 }
+                },
+                scene: {
+                    xaxis: { title: 'Component 1' },
+                    yaxis: { title: 'Component 2' },
+                    zaxis: { title: 'Component 3' },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    }
+                },
+                margin: { l: 0, r: 0, t: 40, b: 0 },
+                height: 600
+            };
+
+            const config = {
+                responsive: true,
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'ollama_embeddings_plot'
+                }
+            };
+
+            Plotly.newPlot('plot', [trace], layout, config);
+
+            let infoText = `<strong>Chunks:</strong> ${chunks.length}<br>
+                            <strong>Model:</strong> ${model}<br>
+                            <strong>Technique:</strong> ${technique.toUpperCase()}<br>`;
+
+            if (isMultiBook) {
+                infoText += `<strong>Books:</strong> ${selectedBooks.map(b => b.title).join(', ')}<br>`;
+            } else {
+                infoText += `<strong>Book:</strong> ${currentBook?.title || 'Custom text'} by ${currentBook?.author || 'Unknown'}<br>`;
+            }
+
+            if (highlightIndices) {
+                infoText += `<strong>Highlighted:</strong> ${highlightIndices.length} matching chunks`;
+            }
+
+            document.getElementById('plotInfo').innerHTML = infoText;
+        }
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+            element.style.display = 'block';
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+            return Math.round(bytes / (1024 * 1024)) + ' MB';
+        }
+
+        // Cosine similarity for query search
+        function cosineSimilarity(a, b) {
+            let dot = 0, magA = 0, magB = 0;
+            for (let i = 0; i < a.length; i++) {
+                dot += a[i] * b[i];
+                magA += a[i] * a[i];
+                magB += b[i] * b[i];
+            }
+            return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+        }
+
+        function visualizeWithQuery(reduced, chunks, model, technique, highlightIndices, queryPoint, queryText) {
+            // Validate coordinates and filter out invalid points
+            const validIndices = [];
+            const validReduced = [];
+            for (let i = 0; i < reduced.length; i++) {
+                const point = reduced[i];
+                if (point && point.length >= 3 &&
+                    isFinite(point[0]) && isFinite(point[1]) && isFinite(point[2]) &&
+                    (point[0] !== 0 || point[1] !== 0 || point[2] !== 0)) {
+                    validIndices.push(i);
+                    validReduced.push(point);
+                }
+            }
+
+            if (validReduced.length === 0) {
+                showStatus('searchStatus', `${technique.toUpperCase()} produced no valid coordinates`, 'error');
+                return;
+            }
+
+            // Map validIndices to validHighlightIndices
+            const validHighlightIndices = highlightIndices.filter(idx => validIndices.includes(idx));
+
+            const validChunks = validIndices.map(i => chunks[i]);
+            const validLabels = validIndices.map(i => currentLabels[i]);
+            const isMultiBook = selectedBooks.length > 1;
+
+            // Split into highlighted and non-highlighted for separate traces with different opacities
+            const highlightedData = [];
+            const nonHighlightedData = [];
+
+            validIndices.forEach((originalIdx, i) => {
+                const point = {
+                    x: validReduced[i][0],
+                    y: validReduced[i][1],
+                    z: validReduced[i][2],
+                    originalIdx,
+                    chunk: validChunks[i],
+                    label: validLabels[i]
+                };
+
+                if (highlightIndices.includes(originalIdx)) {
+                    highlightedData.push(point);
+                } else {
+                    nonHighlightedData.push(point);
+                }
+            });
+
+            // Non-highlighted chunks trace (moderate opacity, smaller, steelblue)
+            const nonHighlightedTrace = {
+                x: nonHighlightedData.map(p => p.x),
+                y: nonHighlightedData.map(p => p.y),
+                z: nonHighlightedData.map(p => p.z),
+                mode: 'markers',
+                type: 'scatter3d',
+                name: 'Other Chunks',
+                text: nonHighlightedData.map(p => {
+                    let text = `Chunk ${p.originalIdx + 1}`;
+                    if (isMultiBook && p.label !== undefined && selectedBooks[p.label]) {
+                        text += ` (${selectedBooks[p.label].title})`;
+                    }
+                    text += `:\n${p.chunk.substring(0, 100)}...`;
+                    return text;
+                }),
+                marker: {
+                    size: 5,
+                    color: 'steelblue',
+                    opacity: 0.6,  // More visible while still letting highlighted ones stand out
+                    showscale: false,
+                    line: {
+                        color: 'white',
+                        width: 0.5
+                    }
+                },
+                hovertemplate: '%{text}<extra></extra>'
+            };
+
+            // Highlighted chunks trace (high opacity, larger, red)
+            const highlightedTrace = {
+                x: highlightedData.map(p => p.x),
+                y: highlightedData.map(p => p.y),
+                z: highlightedData.map(p => p.z),
+                mode: 'markers',
+                type: 'scatter3d',
+                name: 'Matching Chunks',
+                text: highlightedData.map(p => {
+                    let text = `Chunk ${p.originalIdx + 1}`;
+                    if (isMultiBook && p.label !== undefined && selectedBooks[p.label]) {
+                        text += ` (${selectedBooks[p.label].title})`;
+                    }
+                    text += `:\n${p.chunk.substring(0, 100)}...`;
+                    return text;
+                }),
+                marker: {
+                    size: 10,
+                    color: 'red',
+                    opacity: 1.0,  // Fully opaque for visibility
+                    showscale: false,
+                    line: {
+                        color: 'white',
+                        width: 0.5
+                    }
+                },
+                hovertemplate: '%{text}<extra></extra>'
+            };
+
+            // Query trace - gold diamond marker
+            const queryTrace = {
+                x: [queryPoint[0]],
+                y: [queryPoint[1]],
+                z: [queryPoint[2]],
+                mode: 'markers',
+                type: 'scatter3d',
+                name: '⭐ Query',
+                text: [`Query: "${queryText.substring(0, 50)}${queryText.length > 50 ? '...' : ''}"`],
+                hoverinfo: 'text',
+                marker: {
+                    size: 15,
+                    symbol: 'diamond',
+                    color: 'gold',
+                    opacity: 1,
+                    line: {
+                        color: 'black',
+                        width: 2
+                    }
+                }
+            };
+
+            // Connection lines from query to top matches (only for valid coordinates)
+            const lineTraces = validHighlightIndices.map(idx => {
+                const validIdx = validIndices.indexOf(idx);
+                return {
+                    x: [queryPoint[0], validReduced[validIdx][0]],
+                    y: [queryPoint[1], validReduced[validIdx][1]],
+                    z: [queryPoint[2], validReduced[validIdx][2]],
+                    mode: 'lines',
+                    type: 'scatter3d',
+                    name: `Match ${idx + 1}`,
+                    line: {
+                        color: 'rgba(255, 215, 0, 0.3)',
+                        width: 2
+                    },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                };
+            });
+
+            const titleText = isMultiBook ?
+                `${selectedBooks.length} Books - Query Search - ${technique.toUpperCase()}` :
+                `${currentBook?.title || 'Text'} - Query Search - ${technique.toUpperCase()}`;
+
+            const layout = {
+                title: {
+                    text: titleText,
+                    font: { size: 16 }
+                },
+                scene: {
+                    xaxis: { title: 'Component 1' },
+                    yaxis: { title: 'Component 2' },
+                    zaxis: { title: 'Component 3' },
+                    camera: {
+                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                    }
+                },
+                margin: { l: 0, r: 0, t: 40, b: 0 },
+                height: 600
+            };
+
+            const config = {
+                responsive: true,
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'ollama_query_search_plot'
+                }
+            };
+
+            // Build traces array: non-highlighted chunks, highlighted chunks, query, and connection lines
+            const traces = [];
+            if (nonHighlightedTrace.x.length > 0) {
+                traces.push(nonHighlightedTrace);
+            }
+            if (highlightedTrace.x.length > 0) {
+                traces.push(highlightedTrace);
+            }
+            traces.push(queryTrace);
+            traces.push(...lineTraces);
+
+            Plotly.newPlot('plot', traces, layout, config);
+
+            let infoText = `<strong>Query:</strong> "${queryText}"<br>
+                            <strong>Chunks:</strong> ${validChunks.length}/${chunks.length} valid<br>
+                            <strong>Model:</strong> ${model}<br>
+                            <strong>Technique:</strong> ${technique.toUpperCase()}<br>
+                            <strong>Highlighted:</strong> ${validHighlightIndices.length}/${highlightIndices.length} matching chunks<br>`;
+
+            if (isMultiBook) {
+                infoText += `<strong>Books:</strong> ${selectedBooks.map(b => b.title).join(', ')}`;
+            } else {
+                infoText += `<strong>Book:</strong> ${currentBook?.title || 'Custom text'}`;
+            }
+
+            document.getElementById('plotInfo').innerHTML = infoText;
+        }
+
+        async function searchQuery() {
+            const queryText = document.getElementById('queryText').value.trim();
+            if (!queryText) {
+                showStatus('searchStatus', 'Please enter a search query', 'error');
+                return;
+            }
+
+            if (currentEmbeddings.length === 0) {
+                showStatus('searchStatus', 'Please generate embeddings first', 'error');
+                return;
+            }
+
+            showStatus('searchStatus', 'Generating query embedding...', 'info');
+
+            try {
+                // Generate embedding for query
+                const queryEmbedding = await ollama.embedSingle(queryText, currentModel);
+
+                // Calculate similarities
+                const similarities = currentEmbeddings.map((emb, idx) => ({
+                    idx,
+                    similarity: cosineSimilarity(queryEmbedding, emb)
+                }));
+
+                // Sort and get top K
+                similarities.sort((a, b) => b.similarity - a.similarity);
+                const topK = parseInt(document.getElementById('topK').value);
+                const topMatches = similarities.slice(0, topK);
+                const topIndices = topMatches.map(m => m.idx);
+
+                // Project query into reduced space(s)
+                showStatus('searchStatus', 'Projecting query into 3D space...', 'info');
+
+                const projections = {};
+                const isComparisonMode = document.getElementById('viewTabs').style.display !== 'none';
+
+                if (isComparisonMode) {
+                    // Project into all available techniques
+                    if (allReductions.pca) {
+                        projections.pca = projectQueryIntoSpace(allReductions.pca, topIndices);
+                    }
+                    if (allReductions.lda) {
+                        projections.lda = projectQueryIntoSpace(allReductions.lda, topIndices);
+                    }
+                    if (allReductions.isomap) {
+                        projections.isomap = projectQueryIntoSpace(allReductions.isomap, topIndices);
+                    }
+                } else {
+                    // Project into current technique only
+                    projections[currentTechnique] = projectQueryIntoSpace(currentReduced, topIndices);
+                }
+
+                // Store query state
+                queryState = {
+                    embedding: queryEmbedding,
+                    text: queryText,
+                    topIndices: topIndices,
+                    projections: projections
+                };
+
+                // Visualize with query
+                visualizeWithQuery(
+                    currentReduced,
+                    currentChunks,
+                    currentModel,
+                    currentTechnique,
+                    topIndices,
+                    projections[currentTechnique],
+                    queryText
+                );
+
+                const avgSimilarity = (topMatches.reduce((sum, m) => sum + m.similarity, 0) / topMatches.length).toFixed(3);
+                showStatus('searchStatus',
+                    `Found top ${topK} matches. Avg similarity: ${avgSimilarity}. ⭐ = query, red = matches, blue = others.`,
+                    'success'
+                );
+
+                // Enable clear button
+                document.getElementById('clearQueryBtn').disabled = false;
+
+            } catch (error) {
+                showStatus('searchStatus', `Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function clearQuery() {
+            queryState = null;
+            document.getElementById('clearQueryBtn').disabled = true;
+            document.getElementById('queryText').value = '';
+
+            // Re-visualize without query
+            visualize(currentReduced, currentChunks, currentModel, currentTechnique);
+
+            showStatus('searchStatus', 'Query cleared', 'info');
+        }
+
+        // Project query into reduced space by approximating at centroid of top matches
+        function projectQueryIntoSpace(reducedCoords, topIndices) {
+            // Place query at the centroid of its top K nearest neighbors in reduced space
+            let sumX = 0, sumY = 0, sumZ = 0;
+            for (const idx of topIndices) {
+                sumX += reducedCoords[idx][0];
+                sumY += reducedCoords[idx][1];
+                sumZ += reducedCoords[idx][2];
+            }
+            return [
+                sumX / topIndices.length,
+                sumY / topIndices.length,
+                sumZ / topIndices.length
+            ];
+        }
+    </script>
+</body>
+</html>
