@@ -44,38 +44,20 @@ After making the repository public:
    - Once complete, your site will be live at:
      https://wrightmikea.github.io/dimensionality-reduction/
 
-## GitHub Actions Workflows
+## GitHub Actions Workflow
 
-Two workflows have been created:
-
-### 1. Deploy to GitHub Pages (`.github/workflows/deploy.yml`)
+### Deploy to GitHub Pages (`.github/workflows/deploy.yml`)
 - **Triggers**: Automatically on push to main branch
 - **What it does**:
   - Builds the project (transpiles src/ to dist/)
   - Injects build information (commit SHA, timestamp, build host)
   - Deploys to GitHub Pages
 
-### 2. Generate Screenshot (`.github/workflows/screenshot.yml`)
-- **Triggers**: Manually via "Run workflow" button
-- **What it does**:
-  - Builds the project
-  - Starts a dev server
-  - Uses Playwright to capture a screenshot of the PCA visualization
-  - Commits the screenshot to the repository
-
 ## Local Development
 
-For local development with screenshots:
-
 ```bash
-# Install Playwright browsers (one-time setup)
-npx playwright install chromium
-
 # Build and start dev server
 npm start
-
-# In another terminal, capture screenshot
-npm run screenshot
 ```
 
 ## Build Information in Footer
