@@ -11,7 +11,8 @@
     "build": "babel src --out-dir dist",
     "dev": "basic-http-server -a 0.0.0.0:4444",
     "start": "npm run build && npm run dev",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test-ascii.js",
+    "test:ascii": "node test-ascii.js"
   },
   "keywords": [
     "dimensionality-reduction",
@@ -22,7 +23,7 @@
     "visualization",
     "machine-learning"
   ],
-  "author": "",
+  "author": "Michael A. Wright",
   "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
@@ -30,6 +31,7 @@
     "@babel/core": "^7.28.4",
     "@babel/preset-react": "^7.27.1",
     "autoprefixer": "^10.4.21",
+    "playwright": "^1.40.0",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "tailwindcss": "^4.1.14"

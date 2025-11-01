@@ -68,7 +68,7 @@ pca(data3072D, 3);
 **Best Practices**:
 - Use PCA for large dimensions (faster)
 - Use Isomap for non-linear manifolds (slower but better quality)
-- Consider pre-reducing dimensions: 3072d → 128d → 3d
+- Consider pre-reducing dimensions: 3072d -> 128d -> 3d
 
 **Example Code**:
 ```javascript
@@ -92,16 +92,20 @@ const final = isomap(intermediate, 3, 12);       // Quality final reduction
 **What Happens**:
 ```
 Query: "machine learning algorithms"
-  ↓
+  |
+  v
 Query Embedding: [0.23, -0.45, 0.12, ...]
-  ↓
+  |
+  v
 Cosine Similarity: Compare to all chunk embeddings
-  ↓
+  |
+  v
 Ranking: Sort by similarity score
-  ↓
+  |
+  v
 Visualization:
-  🔴 Top 10 = Large red points (most similar)
-  ⚪ Others = Small gray points (less similar)
+  [RED] Top 10 = Large red points (most similar)
+  [GRAY] Others = Small gray points (less similar)
 ```
 
 **Visual Encoding**:
@@ -149,18 +153,21 @@ cosineSimilarity(a, b) {
 **Workflow**:
 ```
 Same 20 Text Chunks
-        ↓
+        |
+        v
    Generate with 4 models:
-        ↓
-┌────────────────┬────────────────┬────────────────┬────────────────┐
-│  OpenAI Small  │  OpenAI Large  │   Voyage-2     │   Cohere v3    │
-│   (1536d)      │   (3072d)      │   (1024d)      │   (1024d)      │
-├────────────────┼────────────────┼────────────────┼────────────────┤
-│   🔴 🔵 🟢     │   🔴 🔵 🟢     │   🔴 🔵 🟢     │   🔴 🔵 🟢     │
-│  Tight         │   Tighter      │   Scattered    │   Mixed        │
-│  clusters      │   clusters     │   clusters     │   clusters     │
-└────────────────┴────────────────┴────────────────┴────────────────┘
-         ↓              ↓               ↓               ↓
+        |
+        v
++----------------+----------------+----------------+----------------+
+|  OpenAI Small  |  OpenAI Large  |   Voyage-2     |   Cohere v3    |
+|   (1536d)      |   (3072d)      |   (1024d)      |   (1024d)      |
++----------------+----------------+----------------+----------------+
+|   [R] [B] [G]  |   [R] [B] [G]  |   [R] [B] [G]  |   [R] [B] [G]  |
+|  Tight         |   Tighter      |   Scattered    |   Mixed        |
+|  clusters      |   clusters     |   clusters     |   clusters     |
++----------------+----------------+----------------+----------------+
+         |              |               |               |
+         v              v               v               v
    Analysis: Compare patterns to choose best model
 ```
 
@@ -181,25 +188,25 @@ Same 20 Text Chunks
 **Example Analysis**:
 
 Imagine you have chunks about:
-- 🤖 Machine Learning
-- 🌳 Nature descriptions
-- 💻 Programming tutorials
-- 🧬 Biology concepts
+- [ML] Machine Learning
+- [NAT] Nature descriptions
+- [CODE] Programming tutorials
+- [BIO] Biology concepts
 
 **Good Model** (OpenAI Large):
 ```
-       🤖 🤖 🤖           Clear separation
+       [ML] [ML] [ML]           Clear separation
 
-🌳 🌳 🌳           💻 💻 💻
+[NAT] [NAT] [NAT]           [CODE] [CODE] [CODE]
 
-              🧬 🧬 🧬
+              [BIO] [BIO] [BIO]
 ```
 
 **Poor Model** (Hypothetical):
 ```
-  🤖 🌳    💻
-🧬   🤖  💻   🌳    All mixed together
-  💻  🧬   🤖  🌳
+  [ML] [NAT]    [CODE]
+[BIO]   [ML]  [CODE]   [NAT]    All mixed together
+  [CODE]  [BIO]   [ML]  [NAT]
 ```
 
 **Interpretation**:
@@ -271,10 +278,10 @@ Imagine you have chunks about:
 **Step 3**: Analyze clusters
 - Look for natural groupings
 - Common clusters might be:
-  - 🔑 Authentication issues
-  - 💳 Billing questions
-  - 📦 Shipping problems
-  - 🐛 Bug reports
+  - [AUTH] Authentication issues
+  - [BILL] Billing questions
+  - [SHIP] Shipping problems
+  - [BUG] Bug reports
 
 **Step 4**: Use query search
 - Query: "payment declined"

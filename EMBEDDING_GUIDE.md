@@ -21,9 +21,9 @@ This guide explains how to use the tool for visualizing real embeddings from var
 
 **Workflow:**
 ```
-Text Chunks → Embedding API → High-D Vectors → PCA/Isomap → 3D Visualization
-                                                              ↓
-                                              Query Search + Highlighting
+Text Chunks -> Embedding API -> High-D Vectors -> PCA/Isomap -> 3D Visualization
+                                                                  |
+                                                Query Search + Highlighting
 ```
 
 ### 2. Model Comparison (`index_comparison.html`)
@@ -238,9 +238,9 @@ If comparing embeddings of:
 - Marketing content
 
 Look for:
-- ✅ **Good**: Clear separation between the three types
-- ⚠️ **Warning**: Tech docs and support tickets overlap
-- ❌ **Bad**: All content mixed together
+- **Good**: Clear separation between the three types
+- **Warning**: Tech docs and support tickets overlap
+- **Bad**: All content mixed together
 
 ## Cost Optimization
 

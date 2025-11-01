@@ -121,7 +121,7 @@ const final = isomap(mid, 3, 12);
 | 1536D     | 240    | ~100ms   | ~4s         |
 | 3072D     | 240    | ~200ms   | ~8s         |
 
-**Isomap complexity**: O(n²) for distance matrix, O(n³) for Floyd-Warshall. Use PCA for real-time applications.
+**Isomap complexity**: O(n^2) for distance matrix, O(n^3) for Floyd-Warshall. Use PCA for real-time applications.
 
 ## Environment Variables (for API deployment)
 
