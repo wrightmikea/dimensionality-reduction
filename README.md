@@ -2,6 +2,8 @@
 
 Interactive 3D visualizations for dimensionality reduction techniques (PCA, LDA, Isomap) with support for real embedding analysis from multiple models.
 
+> **Note:** The live demo includes all synthetic data visualizations (PCA, LDA, Isomap). However, Ollama-based local embedding features require running the project locally on a system with Ollama installed and the appropriate embedding model(s) downloaded (e.g., nomic-embed-text, granite-embedding).
+
 **[Live Demo](https://wrightmikea.github.io/dimensionality-reduction/)**
 
 ![Screenshot](./images/screenshot.png)
